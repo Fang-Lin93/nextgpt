@@ -392,7 +392,9 @@ with gr.Blocks() as demo:
     with gr.Row():
         with gr.Column(scale=0.7, min_width=500):
             with gr.Row():
-                chatbot = gr.Chatbot(label='NExT-GPT Chatbot', avatar_images=((os.path.join(os.path.dirname(__file__), 'user.png')), (os.path.join(os.path.dirname(__file__), "bot.png")))).style(height=440)
+                chatbot = gr.Chatbot(label='NExT-GPT Chatbot', avatar_images=((os.path.join(os.path.dirname(__file__),
+                                                                                            'user.png')), (os.path.join(os.path.dirname(__file__),
+                                                                                                                        "bot.png")))).style(height=440)
 
             with gr.Tab("User Input"):
                 with gr.Row(scale=3):

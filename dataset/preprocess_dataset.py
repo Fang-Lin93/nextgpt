@@ -125,7 +125,7 @@ def load_t2x(data_path):
 
 
 if __name__ == '__main__':
-    save_dir = '../../data/IT_data/T+X-T_data'
+    save_dir = '../data/IT_data/T+X-T_data'
     res = []
 
     # audios = load_t2x(os.path.join(save_dir, 'audio_t2x.json'))

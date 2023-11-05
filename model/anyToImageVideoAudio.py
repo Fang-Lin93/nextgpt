@@ -1,10 +1,7 @@
-import logging
 import os.path
 from typing import List
 
-import torch
 from header import *
-import torch.nn.functional as F
 from .ImageBind import *
 from .ImageBind import data
 from .modeling_llama import LlamaForCausalLM
@@ -613,7 +610,7 @@ class NextGPTModel(nn.Module):
         for m in matches:
             print('image path: ', m)
             if m.startswith('temp'):
-                m = os.path.join('./', m)
+                m = os.path.join('/', m)
                 print('image path: ', m)
             _temp_embedding, _ = self.encode_image([m])
             features.append(_temp_embedding)
@@ -639,7 +636,7 @@ class NextGPTModel(nn.Module):
         for m in matches:
             print('Video path: ', m)
             if m.startswith('temp'):
-                m = os.path.join('./', m)
+                m = os.path.join('/', m)
                 print('Video path: ', m)
             _temp_embedding, _ = self.encode_video([m])
             features.append(_temp_embedding)
@@ -665,7 +662,7 @@ class NextGPTModel(nn.Module):
         for m in matches:
             print('Audio path: ', m)
             if m.startswith('temp'):
-                m = os.path.join('./', m)
+                m = os.path.join('/', m)
                 print('Video path: ', m)
             _temp_embedding, _ = self.encode_audio([m])
             features.append(_temp_embedding)

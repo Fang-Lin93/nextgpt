@@ -280,7 +280,7 @@ Note of arguments:
 
 #### 3.4. Training NExT-GPT  <a href='#all_catelogue'>[Back to Top]</a>
 
-First of all, please refer to the base configuration file [[./code/config/base.yaml]](./code/config/base.yaml) for the basic system setting of overall modules.
+First of all, please refer to the base configuration file [[./code/config/base.yaml]](config/base.yaml) for the basic system setting of overall modules.
 
 Then, the training of NExT-GPT starts with this script:
 ```angular2html
@@ -312,9 +312,9 @@ The whole NExT-GPT training involves 3 steps:
   
   Just run the above `train.sh` script by setting: `--stage 1`
   
-  Also refer to the running config file [[./code/config/stage_1.yaml]](./code/config/stage_1.yaml) and deepspeed config file [[./code/dsconfig/stage_1.yaml]](./code/dsconfig/stage_1.yaml) for more step-wise configurations.
+  Also refer to the running config file [[./code/config/stage_1.yaml]](config/stage_1.yaml) and deepspeed config file [[./code/dsconfig/stage_1.yaml]](dsconfig/stage_1.yaml) for more step-wise configurations.
 
-  Note that the dataset used for training in this step is included `dataset_name_list` and the dataset name must precisely match the definition in [[./code/dataset/catalog.py]](./code/dataset/catalog.py)  
+  Note that the dataset used for training in this step is included `dataset_name_list` and the dataset name must precisely match the definition in [[./code/dataset/catalog.py]](dataset/catalog.py)  
 
 
 
@@ -322,7 +322,7 @@ The whole NExT-GPT training involves 3 steps:
 
   Just run the above `train.sh` script by setting: `--stage 2`
 
-  Also refer to the running config file [[./code/config/stage_2.yaml]](./code/config/stage_2.yaml) and deepspeed config file [[./code/dsconfig/stage_2.yaml]](./code/dsconfig/stage_2.yaml) for more step-wise configurations.
+  Also refer to the running config file [[./code/config/stage_2.yaml]](config/stage_2.yaml) and deepspeed config file [[./code/dsconfig/stage_2.yaml]](dsconfig/stage_2.yaml) for more step-wise configurations.
 
 
 
@@ -332,7 +332,7 @@ The whole NExT-GPT training involves 3 steps:
 
   Just run the above `train.sh` script by setting: `--stage 3`
 
-  Also refer to the running config file [[./code/config/stage_3.yaml]](./code/config/stage_3.yaml) and deepspeed config file [[./code/dsconfig/stage_3.yaml]](./code/dsconfig/stage_3.yaml) for more step-wise configurations.
+  Also refer to the running config file [[./code/config/stage_3.yaml]](config/stage_3.yaml) and deepspeed config file [[./code/dsconfig/stage_3.yaml]](dsconfig/stage_3.yaml) for more step-wise configurations.
 
 
 
