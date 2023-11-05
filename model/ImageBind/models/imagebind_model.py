@@ -491,7 +491,7 @@ class ImageBindModel(nn.Module):
         return outputs
 
 
-def imagebind_huge(pretrained=False, store_path=r'.checkpoints'):
+def imagebind_huge(pretrained=True, store_path=r'.checkpoints'):
     model = ImageBindModel(
         vision_embed_dim=1280,
         vision_num_blocks=32,

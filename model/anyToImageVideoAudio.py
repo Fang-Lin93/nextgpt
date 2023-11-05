@@ -1,6 +1,8 @@
 import os.path
 from typing import List
 
+import torch
+
 from header import *
 from .ImageBind import *
 from .ImageBind import data
@@ -43,7 +45,10 @@ class NextGPTModel(nn.Module):
         self.args = args
 
         self.max_length = args['max_length']
-        self.device = torch.cuda.current_device()
+        if torch.cuda.is_available():
+            self.device = torch.cuda.current_device()
+        else:
+            self.device = torch.device('cpu')
         self.stage = args['stage']
         print('args max_length', args['max_length'])
 
@@ -58,8 +63,10 @@ class NextGPTModel(nn.Module):
         self.visual_encoder.eval()
         print('Visual encoder initialized.')
 
-        self.vicuna_ckpt_path = os.path.join(self.args['pretrained_ckpt_path'], 'vicuna_ckpt',
-                                             self.args['vicuna_version'])
+        # self.vicuna_ckpt_path = os.path.join(self.args['pretrained_ckpt_path'], 'vicuna_ckpt',
+        #                                      self.args['vicuna_version'])
+        self.vicuna_ckpt_path = "ckpt/pretrained_ckpt/vicuna_ckpt/7b_v0"
+
         print(f'Initializing language decoder from {self.vicuna_ckpt_path} ...')
 
         self.llama_model = LlamaForCausalLM.from_pretrained(self.vicuna_ckpt_path)
@@ -754,8 +761,15 @@ class NextGPTModel(nn.Module):
         """
         last_ret_idx = 0
         return_outputs = []
-        generation_model = StableDiffusionPipeline.from_pretrained(self.sd_ckpt_path, torch_dtype=torch.float16).to(
-            "cuda")
+
+        print(f"Loading Image StableDiffusion from {self.sd_ckpt_path}")
+        if torch.cuda.is_available():
+            generation_model = StableDiffusionPipeline.from_pretrained(self.sd_ckpt_path, torch_dtype=torch.float16).to(
+                "cuda")
+        else:
+            generation_model = StableDiffusionPipeline.from_pretrained(self.sd_ckpt_path, torch_dtype=torch.float32)
+        print(f"Load Image StableDiffusion Done !")
+
         for gen_idx in all_gen_idx:
             assert generated_ids[0,
                    gen_idx:gen_idx + self.args['num_gen_img_tokens']].cpu().detach().numpy().tolist() == self.args[
@@ -801,8 +815,14 @@ class NextGPTModel(nn.Module):
         """
         return_outputs = []
         last_ret_idx = 0
-        generation_model = TextToVideoSDPipeline.from_pretrained(self.vd_ckpt_path, torch_dtype=torch.float16).to(
-            "cuda")
+        print(f"Loading Video StableDiffusion from {self.vd_ckpt_path}")
+        if torch.cuda.is_available():
+            generation_model = TextToVideoSDPipeline.from_pretrained(self.vd_ckpt_path, torch_dtype=torch.float16).to(
+                "cuda")
+        else:
+            generation_model = TextToVideoSDPipeline.from_pretrained(self.vd_ckpt_path, torch_dtype=torch.float32)
+        print(f"Load Video StableDiffusion Done !")
+
         for gen_idx in all_gen_idx:
             assert generated_ids[0,
                    gen_idx:gen_idx + self.args['num_gen_video_tokens']].cpu().detach().numpy().tolist() == \
@@ -855,7 +875,14 @@ class NextGPTModel(nn.Module):
         """
         return_outputs = []
         last_ret_idx = 0
-        generation_model = AudioLDMPipeline.from_pretrained(self.ad_ckpt_path, torch_dtype=torch.float16).to("cuda")
+
+        print(f"Loading Audio Diffusion from {self.ad_ckpt_path}")
+        if torch.cuda.is_available():
+            generation_model = AudioLDMPipeline.from_pretrained(self.ad_ckpt_path, torch_dtype=torch.float16).to("cuda")
+        else:
+            generation_model = AudioLDMPipeline.from_pretrained(self.ad_ckpt_path, torch_dtype=torch.float32)
+        print(f"Load Audio Diffusion Done !")
+
         for gen_idx in all_gen_idx:
             assert generated_ids[0,
                    gen_idx:gen_idx + self.args['num_gen_audio_tokens']].cpu().detach().numpy().tolist() == \

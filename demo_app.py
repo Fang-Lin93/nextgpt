@@ -19,18 +19,26 @@ import re
 
 parser = argparse.ArgumentParser(description='train parameters')
 parser.add_argument('--model', type=str, default='nextgpt')
-parser.add_argument('--nextgpt_ckpt_path', type=str)  # the delta parameters trained in each stages
+# the delta parameters trained in each stages
+parser.add_argument('--nextgpt_ckpt_path', type=str, default='ckpt/delta_ckpt/nextgpt/7b_tiva_v0/')
 parser.add_argument('--stage', type=int, default=3)
+parser.add_argument('--mode', type=str, default='validation')
 args = parser.parse_args()
 args = vars(args)
 args.update(load_config(args))
 model = NextGPTModel(**args)
 delta_ckpt = torch.load(os.path.join(args['nextgpt_ckpt_path'], f'pytorch_model.pt'), map_location=torch.device('cpu'))
 model.load_state_dict(delta_ckpt, strict=False)
-model = model.eval().half().cuda()
+
+if torch.cuda.is_available():
+    model = model.eval().half().cuda()
+else:
+    model.eval()
+
 print(f'[!] init the 7b model over ...')
 
-g_cuda = torch.Generator(device='cuda').manual_seed(13)
+# g_cuda = torch.Generator(device='cuda').manual_seed(13)
+
 
 filter_value = -float('Inf')
 min_word_tokens = 10
@@ -38,7 +46,7 @@ gen_scale_factor = 4.0
 stops_id = [[835]]
 ENCOUNTERS = 1
 load_sd = True
-generator = g_cuda
+generator = torch.Generator(device='cpu').manual_seed(13)
 
 max_num_imgs = 1
 max_num_vids = 1
@@ -515,4 +523,5 @@ with gr.Blocks() as demo:
         modality_cache
     ], show_progress=True)
 
-demo.queue().launch(share=True, inbrowser=True, server_name='0.0.0.0', server_port=24004)
+# demo.queue().launch(share=True, inbrowser=True, server_name='10.120.16.42', server_port=24004)
+demo.queue().launch(share=False, inbrowser=True, server_name='localhost', server_port=24004, max_threads=10)

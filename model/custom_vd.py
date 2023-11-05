@@ -22,11 +22,11 @@ from transformers import CLIPTextModel, CLIPTokenizer
 from diffusers.loaders import LoraLoaderMixin, TextualInversionLoaderMixin
 from diffusers.models import AutoencoderKL, UNet3DConditionModel
 from diffusers.schedulers import KarrasDiffusionSchedulers
+from diffusers.utils.torch_utils import randn_tensor
 from diffusers.utils import (
     is_accelerate_available,
     is_accelerate_version,
     logging,
-    randn_tensor,
     replace_example_docstring,
 )
 from diffusers.pipeline_utils import DiffusionPipeline
