@@ -600,6 +600,7 @@ class NextGPTModel(nn.Module):
 
     def _prepare_image_embed(self, text, batch_size):
         pattern = r'Image>(.*?)<\/Image'
+        # find all the path Image>path1</Image>
         matches = re.findall(pattern, text)
         features = []
         p_before_token = self.llama_tokenizer('<Img>', add_special_tokens=False, return_tensors='pt').to(self.device)
@@ -622,6 +623,7 @@ class NextGPTModel(nn.Module):
             _temp_embedding, _ = self.encode_image([m])
             features.append(_temp_embedding)
         feature_embeds = torch.cat(features).sum(dim=0).unsqueeze(0)
+        # usage:  'Image>path1</Image>' in text, but "<Img>" embedding "</Img>" in the llama model
         return torch.cat([p_before_embeds, feature_embeds, p_after_embeds], dim=1)
 
     def _prepare_video_embed(self, text, batch_size):
@@ -676,21 +678,23 @@ class NextGPTModel(nn.Module):
         feature_embeds = torch.cat(features).sum(dim=0).unsqueeze(0)
         return torch.cat([p_before_embeds, feature_embeds, p_after_embeds], dim=1)
 
-    def prepare_generation_embedding(self, inputs):
-        prompt = inputs['prompt']
+    def prepare_generation_embedding(self, inputs: dict):
+        prompt = inputs['prompt']  # text prompt
         text = prompt + '\n### Assistant:'
         print("text prompt: ", text)
         batch_size = 1
         input_embeds = []
+        # text = 'This is a cat: <Image>path1</Image> and a dog: <Image>path2</Image>'
+        # -> ['This is a cat:', 'Image>path1</Image', 'and a dog:', 'Image>path2</Image>']
         split_text = re.split(r' <|> ', text)
         for st in split_text:
-            if st.startswith('Image>'):
+            if st.startswith('Image>'):   # 'Image>path1</Image'
                 input_embeds.append(self._prepare_image_embed(st, batch_size))
             elif st.startswith('Audio>'):
                 input_embeds.append(self._prepare_audio_embed(st, batch_size))
             elif st.startswith('Video>'):
                 input_embeds.append(self._prepare_video_embed(st, batch_size))
-            else:
+            else:  # pure text prompts: each text segment always add bos token in the beginning
                 text_tokens = self.llama_tokenizer(st, add_special_tokens=False, return_tensors='pt').to(self.device)
                 bos = torch.ones([batch_size, 1],
                                  dtype=text_tokens.input_ids.dtype,
@@ -734,22 +738,25 @@ class NextGPTModel(nn.Module):
             output_attentions=True
         )
 
-        output_embeddings = []
+        image_output_embeddings = []
         video_output_embedding = []
         audio_output_embedding = []
         out = outputs.sequences
+        # skip the first bos token[1:]
+        # add the last layer of all the hidden_states as information
+        # all the embeddings gives the shape (1, length, 4096)
         for _hidden_states in outputs.hidden_states[1:]:
-            for idx in self.args['text_emb_to_img_layers']:
-                output_embeddings.append(_hidden_states[idx])
-            for idx in self.args['text_emb_to_video_layers']:
+            for idx in self.args['text_emb_to_img_layers']:  # [-1]
+                image_output_embeddings.append(_hidden_states[idx])
+            for idx in self.args['text_emb_to_video_layers']:  # [-1]
                 video_output_embedding.append(_hidden_states[idx])
-            for idx in self.args['text_emb_to_audio_layers']:
+            for idx in self.args['text_emb_to_audio_layers']:  # [-1]
                 audio_output_embedding.append(_hidden_states[idx])
-        output_embeddings = torch.cat(output_embeddings, dim=1)
+        image_output_embeddings = torch.cat(image_output_embeddings, dim=1)
         video_output_embedding = torch.cat(video_output_embedding, dim=1)
         audio_output_embedding = torch.cat(audio_output_embedding, dim=1)
 
-        return out, output_embeddings, video_output_embedding, audio_output_embedding
+        return out, image_output_embeddings, video_output_embedding, audio_output_embedding
 
     def generate_images(self, generated_ids, embeddings, all_gen_idx, generation_model=None,
                         guidance_scale=7.5, num_inference_steps=40):
@@ -771,17 +778,26 @@ class NextGPTModel(nn.Module):
         print(f"Load Image StableDiffusion Done !")
 
         for gen_idx in all_gen_idx:
+            # here must generate [IMG0] [IMG1] [IMG2] [IMG3] in sequence (why?)
+            # why will it always be the same in the sequence?
+            # [320002, 320003, 320004, 320005]
             assert generated_ids[0,
                    gen_idx:gen_idx + self.args['num_gen_img_tokens']].cpu().detach().numpy().tolist() == self.args[
                        'gen_img_token_idx'], (
                 generated_ids[0, gen_idx:gen_idx + self.args['num_gen_img_tokens']], self.args['gen_img_token_idx'])
-            raw_emb = embeddings[:, gen_idx - 1:gen_idx - 1 + self.args['num_gen_img_tokens'], :]  # (1, 8, 4096)
+            # fetch the hidden_state of the last token-output, and + num_gen_img_tokens as embedding of images
+            # shifted-right output tokens repr: (i, i+1, i+2)->(i+1, i+2, i+3)
+            raw_emb = embeddings[:, gen_idx - 1:gen_idx - 1 + self.args['num_gen_img_tokens'], :]  # (1, 4, 4096)
 
             # Produce generation embedding.
             gen_prefix = ' '.join([f'[IMG{i}]' for i in range(self.args['num_gen_img_tokens'])])
             gen_prefx_ids = self.llama_tokenizer(gen_prefix, add_special_tokens=False,
                                                  return_tensors="pt").input_ids.to(self.device)
             gen_prefix_embs = self.input_embeddings(gen_prefx_ids)  # (1, T_I_V_A.txt, D)
+            # Q: how to initialize the input embedding of new tokens?
+            # Ans: it is pretrained in nextgpt weights, and loaded using model.load_state_dict(delta_ckpt, strict=False)
+            # embedding = hidden_state_embedding + input_embedding of [IMG0, IMG1, IMG2, IMG3]
+            # here maps image embeddings to text embeddings that are recognizable for SD
             gen_emb = self.gen_text_hidden_fcs[-1](raw_emb, gen_prefix_embs)  # (1, 77, 768)
 
             if gen_emb.shape[1] != 77:
@@ -919,7 +935,7 @@ class NextGPTModel(nn.Module):
             return_outputs.append(audio_outputs)
         return return_outputs
 
-    def generate(self, inputs):
+    def generate(self, inputs: dict):
         """
             inputs = {
                 'image_paths': optional,
@@ -967,12 +983,20 @@ class NextGPTModel(nn.Module):
         # init output with image tokens
 
         input_embeds = self.prepare_generation_embedding(inputs)
+        # the embeddings are all the same here! since the fetching procedure is always return the last hidden_state "-1"
+        # generated_image_embeddings == generated_video_embeddings == generated_audio_embeddings
         generated_ids, generated_image_embeddings, generated_video_embeddings, generated_audio_embeddings = self.generate_tokens_embeddings(
             inputs, input_embeds)
+
+        # generated_ids give text: (prompt: show me a cute cat)
+        # "Of course! I have just the thing for you.
+        # Here's an adorable image of a playful cat with its fluffy fur and bright eyes.
+        # It's sure to bring a smile to your face! [IMG0] [IMG1] [IMG2] [IMG3] ###"
 
         return_outputs = []
 
         # Find up to max_num_rets [IMG] tokens, and their corresponding scores.
+        # here only use the first [IMG0](self.args['gen_img_token_idx'][0]) to generate image
         all_gen_img_idx = [i for i, x in enumerate(generated_ids[0, :] == self.args['gen_img_token_idx'][0]) if x][
                           :inputs['max_num_imgs']]
         print('all_gen_img_idx: ', all_gen_img_idx)

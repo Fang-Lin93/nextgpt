@@ -43,10 +43,10 @@ print(f'[!] init the 7b model over ...')
 filter_value = -float('Inf')
 min_word_tokens = 10
 gen_scale_factor = 4.0
-stops_id = [[835]]
+stops_id = [[835]]  # its the symbol '###'
 ENCOUNTERS = 1
 load_sd = True
-generator = torch.Generator(device='cpu').manual_seed(13)
+generator = torch.Generator(device='cpu').manual_seed(23)
 
 max_num_imgs = 1
 max_num_vids = 1
@@ -64,7 +64,7 @@ def postprocess(self, y):
         return []
     for i, (message, response) in enumerate(y):
         y[i] = (
-            None if message is None else mdtex2html.convert((message)),
+            None if message is None else mdtex2html.convert(message),
             None if response is None else mdtex2html.convert(response),
         )
     return y

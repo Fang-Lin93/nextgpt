@@ -36,7 +36,7 @@ num_gen_audio_tokens: 8
 text_fc_to_audio_mode: transformer  # [qformer, transformer]
 
 # ========= image diffusion model ========== #
-image_diffusion: "ckpt/sd_ckpt" #runwayml/stable-diffusion-v1-5 # [runwayml/stable-diffusion-v1-5, stabilityai/stable-diffusion-2]
+image_diffusion: "ckpt/pretrained_ckpt/stable-diffusion-v1-5" #runwayml/stable-diffusion-v1-5 # [runwayml/stable-diffusion-v1-5, stabilityai/stable-diffusion-2]
 
 # ========= video diffusion model ========== #
 video_diffusion: cerspense/zeroscope_v2_576w
